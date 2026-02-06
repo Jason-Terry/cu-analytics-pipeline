@@ -1,0 +1,14 @@
+data/*.db
+data/*.db-wal
+data/*.db-shm
+.env
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+reports/
+docs/
+.claude/
