@@ -152,12 +152,38 @@ scripts/
 - **SQL sandboxing**: LLM-generated SQL is validated against a blocklist (no ATTACH, CREATE, DROP, etc.) and executed through a read-only SQLite connection with an authorizer that restricts access to only `members_clean` and `loans_clean`.
 - **Presidio validation**: NLP-based PII detection runs on a sample of clean records as a secondary safety net.
 
-## Credit Tiers
+## Data Transformations
 
-| Tier | Score Range | Description |
-|------|-------------|-------------|
-| Tier 1 | 741+ | Super-prime, best terms |
-| Tier 2 | 671-740 | Prime, competitive rates |
-| Tier 3 | 581-670 | Near-prime, standard rates |
-| Tier 4 | 451-580 | Subprime, higher rates |
-| Tier 5 | 450 and below | Highest risk, limited products |
+The ETL converts raw PII fields into analytics-safe equivalents. No PII crosses into the analytics database — only bucketed, generalized values.
+
+| Source Field (PII) | Analytics Field | Transformation |
+|--------------------|-----------------|----------------|
+| `member_id` | `analytics_id` | Replaced with opaque 12-char UUID4 hex |
+| `date_of_birth` | `age_bracket` | Bucketed: 18-25, 26-35, 36-45, 46-55, 56-65, 65+ |
+| `credit_score` | `credit_score_range` | Bucketed into 5 loan approval tiers (Tier 1-5) |
+| `state` | `state` + `region` | State kept, region derived (Northeast, South, Midwest, West) |
+| `membership_date` | `membership_year` + `tenure_years` | Date dropped, year and tenure calculated |
+| `origination_date` | `origination_year` | Full date dropped, year only |
+| first_name, last_name, ssn, email, phone, address, city, zip | *(dropped)* | Never written to analytics.db |
+
+## Presidio False Positive Handling
+
+Presidio runs NLP-based PII detection on a sample of the clean output as a validation layer. However, some legitimate analytics fields trigger false positives:
+
+- **State abbreviations** (e.g. `"CA"`, `"NY"`) flagged as `LOCATION`
+- **Age brackets** (e.g. `"26-35"`) flagged as `DATE_TIME`
+- **Analytics IDs** (random hex like `"99971fe3a4f4"`) flagged as `DATE_TIME`, `PERSON`, `LOCATION`, or `MEDICAL_LICENSE`
+
+These are handled via an `EXPECTED_ENTITIES` allowlist in `src/etl/scrubber.py`:
+
+```python
+EXPECTED_ENTITIES: dict[str, set[str]] = {
+    "analytics_id": {"DATE_TIME", "PERSON", "LOCATION", "MEDICAL_LICENSE"},
+    "state": {"LOCATION"},
+    "region": {"LOCATION"},
+    "age_bracket": {"DATE_TIME"},
+    "credit_score_range": {"DATE_TIME"},
+}
+```
+
+When Presidio flags a field, the validator checks: is this entity type expected for this field? If yes, it's a known false positive and gets skipped. Only unexpected findings (e.g. a real SSN pattern appearing in a field that shouldn't have one) are reported.
