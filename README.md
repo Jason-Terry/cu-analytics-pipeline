@@ -1,4 +1,4 @@
-# Skyla Credit Union Analytics Pipeline
+# Credit Union Analytics Pipeline
 
 A demo data pipeline that generates a fake credit union database with PII, scrubs it through an ETL pipeline using Microsoft Presidio for validation, and serves AI-powered analytics via a FastAPI + Claude API.
 

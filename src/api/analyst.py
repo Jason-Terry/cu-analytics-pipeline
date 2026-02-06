@@ -20,7 +20,7 @@ _BLOCKED_SQL = re.compile(
 )
 
 # Only these tables are queryable
-_ALLOWED_TABLES = {"members_clean", "loans_clean"}
+_ALLOWED_TABLES = {"members_clean", "loans_clean", "service_reviews"}
 
 
 def _validate_sql(sql: str) -> str | None:
@@ -332,6 +332,20 @@ class ClaudeAnalyst:
                     "status": "Current loan status. Values: active, paid_off, defaulted, delinquent",
                     "monthly_payment": "Monthly payment amount in dollars (float)",
                     "remaining_balance": "Outstanding balance in dollars (float, 0.0 if paid_off)",
+                },
+            },
+            "service_reviews": {
+                "description": "Member service reviews from multiple channels. Linked to members via analytics_id.",
+                "columns": {
+                    "review_id": "Unique review identifier (text UUID)",
+                    "source_system": "Origin system. Values: zendesk, ivr, google_reviews, app_store, survey, branch_comment, website_complaint",
+                    "source_ref_id": "Unique reference ID from the source system (e.g. ZD-00147, IVR-20250614-0823)",
+                    "analytics_id": "Foreign key to members_clean (text, 12-char hex)",
+                    "timestamp": "ISO 8601 timestamp of the review",
+                    "channel": "Interaction channel. Values: phone, email, in_branch, mobile_app, website, chat, mail",
+                    "category": "Review category. Values: collections, auto_loans, mortgage, credit_card, mobile_app, online_banking, branch_experience, customer_service_phone, account_opening, fees_and_rates, fraud_resolution, loan_application_process",
+                    "satisfaction_score": "Score from 1 (worst) to 10 (best)",
+                    "review_text": "Free-text review content",
                 },
             },
             "data_not_tracked": [

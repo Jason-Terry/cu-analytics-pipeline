@@ -95,13 +95,28 @@ def init_source_db() -> sqlite3.Connection:
     return conn
 
 
+SERVICE_REVIEWS_TABLE = """
+CREATE TABLE IF NOT EXISTS service_reviews (
+    review_id         TEXT PRIMARY KEY,
+    source_system     TEXT NOT NULL,
+    source_ref_id     TEXT NOT NULL UNIQUE,
+    analytics_id      TEXT NOT NULL REFERENCES members_clean(analytics_id),
+    timestamp         TEXT NOT NULL,
+    channel           TEXT NOT NULL,
+    category          TEXT NOT NULL,
+    satisfaction_score INTEGER NOT NULL CHECK(satisfaction_score BETWEEN 1 AND 10),
+    review_text       TEXT NOT NULL
+);
+"""
+
+
 def init_analytics_db() -> sqlite3.Connection:
     """Create and return a connection to the analytics.db."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(ANALYTICS_DB)
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA foreign_keys=ON;")
-    conn.executescript(MEMBERS_CLEAN_TABLE + LOANS_CLEAN_TABLE)
+    conn.executescript(MEMBERS_CLEAN_TABLE + LOANS_CLEAN_TABLE + SERVICE_REVIEWS_TABLE)
     return conn
 
 

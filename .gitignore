@@ -12,3 +12,6 @@ build/
 reports/
 docs/
 .claude/
+data/chroma/
+data/templates/
+data/raw/
